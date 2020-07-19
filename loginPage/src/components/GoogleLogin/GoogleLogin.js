@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Redirect } from "react-router-dom";
-import { Button } from "@material-ui/core";
 import axios from 'axios';
 
 const GoogleLogin = (props) => {
@@ -67,7 +66,7 @@ const GoogleLogin = (props) => {
   return (
     <>
       <h1>Google Login Demo</h1>
-      <Button id="loginButton">Sign in with Google</Button>
+      <button id="loginButton">Sign in with Google</button>
       {idToken && (
         <Redirect
           to={{

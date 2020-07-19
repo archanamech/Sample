@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Button } from "@material-ui/core";
-import FacebookIcon from "@material-ui/icons/Facebook";
 import { Redirect } from "react-router-dom";
 import { HomePage } from "../HomePage/HomePage";
+import axios from "axios";
 
 const FacebookLogin = () => {
-
-  const [fbAccessToken, setFbAccessToken] = useState('');
+  const [fbAccessToken, setFbAccessToken] = useState("");
 
   const loadFbLoginApi = () => {
     window.fbAsyncInit = function () {
       window.FB.init({
-        appId: 323972495296732,
+        appId: 646324019294890,
         cookie: true, // enable cookies to allow the server to access
         // the session
         xfbml: true, // parse social plugins on this page
@@ -39,53 +37,73 @@ const FacebookLogin = () => {
     loadFbLoginApi();
   });
 
-
   const checkLoginState = () => {
     window.FB.login(
       function (response) {
-        console.log(response);
         if (response.authResponse) {
           console.log("Welcome!  Fetching your information.... ");
-          //  var uid = response.authResponse.userID;
-           var accessToken = response.authResponse.accessToken;
-           
-          window.FB.api("/me", function (response) {
-            console.log(response);
-            console.log("Good to see you, " + response.name + ".");
-            setFbAccessToken(response.name);
-            console.log("Good to see you, " + response.email + ".");
-          });
+
+          var input_token = response.authResponse.accessToken; //token from facebook, send it to our app server
+          console.log(input_token);
+
+          const res = axios({
+            method: "POST",
+            url:
+              "https://gopoolit.herokuapp.com/authenticate/userFacebookLogin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            data: {
+              input_token: input_token,
+            },
+            withCredentials: true,
+          }).then((res) => console.log(res)); // response from our server
+
+          testAPI();
         } else {
           console.log("User cancelled login or did not fully authorize.");
         }
       },
-       {scope: 'email',
-       auth_type: 'rerequest'}
-       
+      { scope: "email", return_scopes: true, auth_type: "rerequest" } //Ask for the email permission in the login process
     );
   };
 
-  
+  function testAPI() {
+    console.log("Welcome!  Fetching your information.... ");
 
+    //Also, you need to ask for the fields you want to get:
+    window.FB.api("/me", { fields: "email" }, function (response) {
+      setFbAccessToken(response.name);
+      console.log(
+        "Good to see you, " +
+          response.name +
+          "." +
+          " Email: " +
+          response.email +
+          " Facebook ID: " +
+          response.id
+      );
+    });
+  }
   const handleFBLogin = () => {
     window.FB.login(checkLoginState());
   };
 
-  console.log(fbAccessToken); 
+  console.log(fbAccessToken);
 
   return (
     <>
-      <Button variant="contained" color="primary" onClick={handleFBLogin}>
-        <FacebookIcon />
+      <button variant="contained" color="primary" onClick={handleFBLogin}>
         Sign in with Facebook
-      </Button>
-      {fbAccessToken && <Redirect to={{
-            pathname: '/home',
-            state: {fbAccessToken: fbAccessToken}
-        }}
-/>}
-     
-      {/* <Route path="/employees" component={EmployeeList}/> */}
+      </button>
+      {fbAccessToken && (
+        <Redirect
+          to={{
+            pathname: "/home",
+            state: { fbAccessToken: fbAccessToken },
+          }}
+        />
+      )}
     </>
   );
 };

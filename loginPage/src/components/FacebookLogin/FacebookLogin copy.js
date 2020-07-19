@@ -1,19 +1,20 @@
-import React, { useEffect } from "react";
-import { Button } from "@material-ui/core";
-import FacebookIcon from "@material-ui/icons/Facebook";
-import { withRouter } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Redirect } from "react-router-dom";
+import { HomePage } from "../HomePage/HomePage";
+import axios from 'axios';
 
-const FacebookLogin = (props) => {
-  const { history } = props;
+const FacebookLogin = () => {
+  const [fbAccessToken, setFbAccessToken] = useState("");
 
   const loadFbLoginApi = () => {
     window.fbAsyncInit = function () {
       window.FB.init({
-        appId: 323972495296732,
+        appId: 646324019294890,
         cookie: true, // enable cookies to allow the server to access
         // the session
         xfbml: true, // parse social plugins on this page
         version: "v2.5", // use version 2.1
+        status: true,
       });
     };
 
@@ -23,7 +24,7 @@ const FacebookLogin = (props) => {
     (function (d, s, id) {
       var js,
         fjs = d.getElementsByTagName(s)[0];
-      console.log(fjs);
+      // console.log(fjs);
       if (d.getElementById(id)) return;
       js = d.createElement(s);
       js.id = id;
@@ -39,51 +40,64 @@ const FacebookLogin = (props) => {
   const checkLoginState = () => {
     window.FB.login(
       function (response) {
+        console.log(response);
         if (response.authResponse) {
           console.log("Welcome!  Fetching your information.... ");
-          // var uid = response.authResponse.userID;
-          // var accessToken = response.authResponse.accessToken;
-          // console.log(uid);
-          // console.log(accessToken);
-          tesAPI();
-          history.push("/home");
+          //  var uid = response.authResponse.userID;
+          var input_token = response.authResponse.accessToken;
+          console.log(input_token);
+
+          const res = axios({
+            method: "POST",
+            url:
+              "https://gopoolit.herokuapp.com/authenticate/userFacebookLogin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            data: {
+              input_token: input_token,
+            },
+            withCredentials: true,
+          })
+            .then((res) => console.log(res));
+
           window.FB.api("/me", function (response) {
             console.log(response);
             console.log("Good to see you, " + response.name + ".");
-            console.log("Good to see you, " + response.email + ".");
+            setFbAccessToken(response.name);
+            console.log("email, " + response.email + ".");
           });
         } else {
           console.log("User cancelled login or did not fully authorize.");
         }
       },
-      { scope: "email" }
+      { scope: "email", return_scopes: true, auth_type: "rerequest" }
     );
-  };
-
-  const testAPI = () => {
-    var api ="https://graph.facebook.com/v2.8/" + data.credentials.userId + "?fields=name,email&access_token=" + data.credentials.token;
-    fetch(api)
-      .then((response) => response.json())
-      .then((responseData) => {
-        console.log(responseData.access_token);
-        console.log(responseData.email);
-      })
-      .done();
   };
 
   const handleFBLogin = () => {
     window.FB.login(checkLoginState());
   };
 
+  console.log(fbAccessToken);
+
   return (
     <>
-      <Button variant="contained" color="primary" onClick={handleFBLogin}>
-        <FacebookIcon />
+      <button variant="contained" color="primary" onClick={handleFBLogin}>
         Sign in with Facebook
-      </Button>
+      </button>
+      {fbAccessToken && (
+        <Redirect
+          to={{
+            pathname: "/home",
+            state: { fbAccessToken: fbAccessToken },
+          }}
+        />
+      )}
+
       {/* <Route path="/employees" component={EmployeeList}/> */}
     </>
   );
 };
 
-export default withRouter(FacebookLogin);
+export default FacebookLogin;
