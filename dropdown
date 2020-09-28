@@ -1,0 +1,145 @@
+import React, { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { Redirect } from "react-router-dom";
+import { PhoneNumberFormat, PhoneNumberUtil } from "google-libphonenumber";
+
+import data from "../../assets/CountryCode/Countries.json";
+import { sendOTP } from "../../actions/login";
+import { storePhoneNumber } from "../../actions/storingUserData";
+
+import { Row, Col, Form, DropdownButton, Dropdown } from 'react-bootstrap';
+import '../../assets/scss/Login/nexmo.scss';
+import Axios from "axios";
+
+const Nexmo = () => {
+  useEffect(() => {
+    handleFlag();
+  },[])
+
+  const handleFlag = async (e) => {
+    const response = await Axios.get("https://restcountries.eu/rest/v2/all");
+    const result = response.data;
+    setNames(result);
+    console.log(result);
+  }
+
+  const [iso, setIso] = useState([""]);
+  const [country, setCountry] = useState("Country")
+  const [number, setNumber] = useState("");
+  const [message, setMessage] = useState("");
+  const [valid, setValid] = useState(true);
+  const [state, setState] = useState(false);
+
+  const dispatch = useDispatch();
+  const countryLists = data;
+
+  const onNumberChange = (e) => {
+    setNumber(e.target.value);
+    validatePhoneNumber(iso + e.target.value);
+    
+  };
+
+  const onIsoSelect = (e) => {
+    const getCountryCode = e.split(','); //e is the string ex:- "India, +91" changed to array with split()
+    const resultCountry = getCountryCode[0];
+    const resultCode = getCountryCode[1];
+    setCountry(resultCountry);
+    setIso(resultCode);
+    setValid(true);
+    setNumber('');
+    setMessage('');
+  };
+
+  const validatePhoneNumber = (phoneNumber) => {
+    console.log(phoneNumber);
+    let checkPhoneNumber = false;
+
+    try {
+      const phoneUtil = PhoneNumberUtil.getInstance(); //The type of the phone returned after a string number has been parsed via PhoneNumberUtil.parse()
+      checkPhoneNumber = phoneUtil.isValidNumber(phoneUtil.parse(phoneNumber));
+    } catch (e) {
+      checkPhoneNumber = false;
+    }
+    if (checkPhoneNumber) {
+      setMessage('')
+        getValidNumber(phoneNumber)
+      setValid(false);
+    } else {
+      setMessage('Please enter your valid phone number')
+      setValid(true);
+    }
+  };
+
+  function getValidNumber(phoneNumber) {
+    const phoneUtil = PhoneNumberUtil.getInstance();
+    const parsedNumber = phoneUtil.parse(phoneNumber);
+    return phoneUtil.format(parsedNumber, PhoneNumberFormat.INTERNATIONAL) //PhoneNumberFormat.INTERNATIONAL gives the number in international format eg:- 11 111 1111111
+  }
+  const handleSubmit = (iso, number) => {
+    let phone = iso + number;
+    console.log(phone);
+    dispatch(sendOTP(phone));
+    setState(true);
+    dispatch(storePhoneNumber(phone));
+  };
+  const [names, setNames] = useState([]);
+  const [countryName, setCountryName] = useState("choose");
+  const [callingCodes, setCallingCodes] = useState([]);
+  const [flags, setFlags] = useState("");
+
+  const onFlagSelect = (countryData) => {
+    let data = countryData;
+    console.log(typeof data);
+    let arr = data.split(',');
+    console.log(arr);
+    let arrFirstItem = arr[0];
+    let arrSecondItem = arr[1];
+    setCountryName(arrFirstItem);
+    setFlags(arrSecondItem);
+// console.log(countryData);
+  }
+  const handleFlagSubmit = (callingCodes, number) => {
+
+  }
+
+
+  return (
+    <div className="mb-3">
+      <Form onSubmit={() => handleSubmit(iso, number)}>
+        <DropdownButton title={country} onSelect={onIsoSelect} className="dropdown-button mr-2">
+        {countryLists.map((countryData) => (
+            <Dropdown.Item key={countryData.countryCode} eventKey={[countryData.name, countryData.Iso]}>
+              {countryData.name}
+            </Dropdown.Item>
+          ))}
+        </DropdownButton>
+        <input type="number" value={number} onChange={onNumberChange} placeholder="Enter your mobile number"/>
+        <p>
+      {iso}{message}
+        </p>
+        <button type="submit" disabled={valid}>
+          Submit
+        </button>
+      </Form>
+      <Form>
+      {/* title={<span>{incomingArrow} Incoming </span>} */}
+        {/* <DropdownButton title={`${countryName}`} onSelect={onFlagSelect}> */}
+        <DropdownButton title={<span>{countryName.name}</span>} onSelect={onFlagSelect}>
+          {names.map( countryName => (
+<span key={countryName.name}>{countryName.name}</span>
+          //   <Dropdown.Item key={countryName.name} eventKey={[countryName.name, countryName.flag]}>
+          //     <span style={{color: "red"}}>{countryName.name}</span>
+          //     {/* <span>{countryName.flag}</span> */}
+          //     <img src={countryName.flag} width="20" height="20"/>
+          //     {/* {countryName.callingCodes[0]} */}
+          //   </Dropdown.Item>
+          ))}
+
+        </DropdownButton>
+      </Form>
+      {state ? <Redirect to={{ pathname: "/verify" }} /> : null}
+      </div>
+  );
+};
+
+export default Nexmo;
